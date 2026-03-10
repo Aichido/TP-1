@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "com.example.auth",
+      "type": "java.lang.String",
+      "description": "Description for com.example.auth."
+  }
+] }
