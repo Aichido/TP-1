@@ -35,3 +35,40 @@
 2026-03-24T19:59:37.380+04:00  INFO 11696 --- [auth] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
 2026-03-24T19:59:37.386+04:00  INFO 11696 --- [auth] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
 2026-03-24T19:59:37.402+04:00  INFO 11696 --- [auth] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-03-24T22:27:14.855+04:00  INFO 12628 --- [auth] [main] com.example.auth.AuthApplication         : Starting AuthApplication using Java 17.0.12 with PID 12628 (C:\Users\Tahiry\Desktop\Mon Java\TP-1\target\classes started by Tahiry in C:\Users\Tahiry\Desktop\Mon Java\TP-1)
+2026-03-24T22:27:14.869+04:00 DEBUG 12628 --- [auth] [main] com.example.auth.AuthApplication         : Running with Spring Boot v3.5.11, Spring v6.2.16
+2026-03-24T22:27:14.872+04:00  INFO 12628 --- [auth] [main] com.example.auth.AuthApplication         : No active profile set, falling back to 1 default profile: "default"
+2026-03-24T22:27:16.770+04:00  INFO 12628 --- [auth] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-24T22:27:16.915+04:00  INFO 12628 --- [auth] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 120 ms. Found 1 JPA repository interface.
+2026-03-24T22:27:18.085+04:00  INFO 12628 --- [auth] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-03-24T22:27:18.122+04:00  INFO 12628 --- [auth] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-03-24T22:27:18.124+04:00  INFO 12628 --- [auth] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.52]
+2026-03-24T22:27:18.332+04:00  INFO 12628 --- [auth] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-03-24T22:27:18.333+04:00  INFO 12628 --- [auth] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3356 ms
+2026-03-24T22:27:18.774+04:00  INFO 12628 --- [auth] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-24T22:27:18.954+04:00  INFO 12628 --- [auth] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.42.Final
+2026-03-24T22:27:19.072+04:00  INFO 12628 --- [auth] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-03-24T22:27:19.928+04:00  INFO 12628 --- [auth] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-24T22:27:20.020+04:00  INFO 12628 --- [auth] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-24T22:27:20.499+04:00  INFO 12628 --- [auth] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@5d221b20
+2026-03-24T22:27:20.504+04:00  INFO 12628 --- [auth] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-24T22:27:20.620+04:00  WARN 12628 --- [auth] [main] org.hibernate.dialect.Dialect            : HHH000511: The 5.5.5 version for [org.hibernate.dialect.MySQLDialect] is no longer supported, hence certain features may not work properly. The minimum supported version is 8.0.0. Check the community dialects project for available legacy versions.
+2026-03-24T22:27:20.633+04:00  WARN 12628 --- [auth] [main] org.hibernate.orm.deprecation            : HHH90000025: MySQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-03-24T22:27:20.693+04:00  INFO 12628 --- [auth] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 5.5.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-03-24T22:27:22.887+04:00  INFO 12628 --- [auth] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-03-24T22:27:23.028+04:00  INFO 12628 --- [auth] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-24T22:27:23.835+04:00  WARN 12628 --- [auth] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-03-24T22:27:24.558+04:00  INFO 12628 --- [auth] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-03-24T22:27:24.576+04:00  INFO 12628 --- [auth] [main] com.example.auth.AuthApplication         : Started AuthApplication in 12.273 seconds (process running for 14.282)
+2026-03-24T22:29:19.084+04:00  INFO 12628 --- [auth] [SpringApplicationShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-24T22:29:19.798+04:00  INFO 12628 --- [auth] [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+2026-03-24T22:29:19.812+04:00  INFO 12628 --- [auth] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-03-24T22:29:19.822+04:00  INFO 12628 --- [auth] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-03-24T22:29:19.845+04:00  INFO 12628 --- [auth] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
