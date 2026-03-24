@@ -57,7 +57,7 @@ public class AuthService {
             throw new InvalidInputException("Le mot de passe doit faire au moins 4 caractères");
         }
 
-        // Vérifier unicité email
+        // Vérifier si l'email est unique
         if (userRepository.findByEmail(email).isPresent()) {
             logger.warn("Tentative d'inscription avec email déjà existant : {}", email);
             throw new ResourceConflictException("Cet email est déjà utilisé");
