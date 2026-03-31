@@ -6,16 +6,18 @@ import java.time.LocalDateTime;
 /**
  * Entité représentant un utilisateur en base de données.
  * <p>
- * TP2 : Le mot de passe est désormais stocké sous forme de hash BCrypt
- * (champ {@code password_hash}).
- * Le champ {@code password_clear} du TP1 est supprimé définitivement.
+ * TP3 : Le mot de passe est stocké de façon réversible (colonne {@code password_encrypted})
+ * afin de pouvoir être utilisé comme clé HMAC lors du login sans le transmettre sur le réseau.
  * </p>
  * <p>
- * TP2 améliore le stockage mais ne protège pas encore contre le rejeu.
+ * <b>Avertissement pédagogique :</b> En industrie, on évite de stocker un mot de passe
+ * réversible. On préférerait un hash non réversible et adaptatif. Ici, on accepte le
+ * chiffrement réversible pour simplifier l'apprentissage du protocole signé.
+ * TP4 corrigera ce point avec AES-GCM et une Master Key.
  * </p>
  *
  * @author Tahiry
- * @version 2.0 - TP2
+ * @version 3.0 - TP3
  */
 @Entity
 @Table(name = "users")
@@ -28,14 +30,17 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    /** Mot de passe stocké sous forme de hash BCrypt. */
-    @Column(name = "password_hash", nullable = false)
+    /**
+     * Mot de passe stocké en clair (TP3).
+     * Sera chiffré par AES-GCM avec APP_MASTER_KEY en TP4.
+     */
+    @Column(name = "password_encrypted", nullable = false)
     private String password;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    /** Token de session simple pour la route protégée. */
+    /** Token SSO émis après authentification HMAC réussie. */
     @Column(name = "session_token")
     private String sessionToken;
 
@@ -55,7 +60,6 @@ public class User {
         this.createdAt = LocalDateTime.now();
     }
 
-    // Getters & Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

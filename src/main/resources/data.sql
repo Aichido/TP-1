@@ -1,5 +1,6 @@
--- Compte de test TP2
+-- Compte de test TP3
 -- Email    : toto@example.com
--- Password : Toto1234!@secure  (BCrypt, politique TP2 : 12 car, maj, min, chiffre, special)
-INSERT IGNORE INTO users (email, password_hash, failed_attempts, created_at)
-VALUES ('toto@example.com', '$2a$10$gYVgafi6UHNLf2x7HD8.6eYwXETvQ2WKWOPTkcXzFFDSm13FzL33S', 0, NOW());
+-- Password : Toto1234!@secure  (stocké en clair - TP3 pédagogique)
+-- TP4 chiffrera ce champ avec AES-GCM + APP_MASTER_KEY
+INSERT IGNORE INTO users (email, password_encrypted, failed_attempts, created_at)
+VALUES ('toto@example.com', 'Toto1234!@secure', 0, NOW());
