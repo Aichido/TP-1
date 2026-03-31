@@ -19,19 +19,21 @@ import java.util.UUID;
 /**
  * Service principal d'authentification.
  * <p>
- * TP3 : Le protocole de login passe de "envoi du mot de passe" à "preuve HMAC".
- * Le client calcule {@code HMAC_SHA256(key=password, data=email+":"+nonce+":"+timestamp)}
- * et envoie cette preuve sans jamais transmettre le mot de passe.
- * Le serveur recalcule le HMAC côté serveur et compare en temps constant.
+ * TP4 : Le mot de passe est désormais chiffré au repos via AES-256-GCM + Master Key.
+ * <ul>
+ *   <li><b>Inscription</b> : password_plain → chiffrement AES-GCM → stockage password_encrypted</li>
+ *   <li><b>Login</b> : lecture password_encrypted → déchiffrement → recalcul HMAC → vérification</li>
+ * </ul>
+ * La {@code APP_MASTER_KEY} est injectée via variable d'environnement et ne circule jamais
+ * dans le code ni dans les logs.
  * </p>
  * <p>
- * <b>Limite pédagogique :</b> Le mot de passe est stocké en clair ({@code password_encrypted})
- * pour permettre le recalcul HMAC. Ce stockage réversible sera chiffré en TP4 avec AES-GCM.
- * TP3 améliore le protocole de transit mais ne protège pas encore le stockage au repos.
+ * TP3 avait introduit le protocole HMAC (zéro transmission du mot de passe sur le réseau).
+ * TP4 complète cette protection en sécurisant aussi le stockage au repos.
  * </p>
  *
  * @author Tahiry
- * @version 3.0 - TP3
+ * @version 4.0 - TP4
  */
 @Service
 public class AuthService {
@@ -48,15 +50,18 @@ public class AuthService {
     private final AuthNonceRepository authNonceRepository;
     private final PasswordPolicyValidator passwordPolicyValidator;
     private final HmacService hmacService;
+    private final AesGcmService aesGcmService;
 
     public AuthService(UserRepository userRepository,
                        AuthNonceRepository authNonceRepository,
                        PasswordPolicyValidator passwordPolicyValidator,
-                       HmacService hmacService) {
+                       HmacService hmacService,
+                       AesGcmService aesGcmService) {
         this.userRepository = userRepository;
         this.authNonceRepository = authNonceRepository;
         this.passwordPolicyValidator = passwordPolicyValidator;
         this.hmacService = hmacService;
+        this.aesGcmService = aesGcmService;
     }
 
     /**
@@ -64,7 +69,7 @@ public class AuthService {
      * Le mot de passe est stocké en clair (TP3 pédagogique) pour servir de clé HMAC.
      *
      * @param email    l'adresse email de l'utilisateur
-     * @param password le mot de passe en clair (sera chiffré AES-GCM en TP4)
+     * @param password le mot de passe en clair (chiffré AES-GCM avant stockage en TP4)
      * @return l'utilisateur créé
      * @throws InvalidInputException     si les données sont invalides
      * @throws ResourceConflictException si l'email existe déjà
@@ -84,8 +89,9 @@ public class AuthService {
             throw new ResourceConflictException("Cet email est déjà utilisé");
         }
 
-        // TP3 : stockage en clair (sera chiffré AES-GCM en TP4)
-        User user = new User(email, password);
+        // TP4 : chiffrement AES-256-GCM avant stockage (format v1:iv:ciphertext)
+        String encryptedPassword = aesGcmService.encrypt(password);
+        User user = new User(email, encryptedPassword);
         userRepository.save(user);
         logger.info("Inscription réussie pour : {}", email);
         return user;
@@ -149,9 +155,12 @@ public class AuthService {
         authNonce.setConsumed(true);
         authNonceRepository.save(authNonce);
 
+        // TP4 : déchiffrement AES-GCM pour récupérer le mot de passe en clair (clé HMAC)
+        String plainPassword = aesGcmService.decrypt(user.getPassword());
+
         // Recalcul HMAC côté serveur
         String message = hmacService.buildMessage(email, nonce, timestamp);
-        String expectedHmac = hmacService.compute(user.getPassword(), message);
+        String expectedHmac = hmacService.compute(plainPassword, message);
 
         // Comparaison en temps constant
         if (!hmacService.compareConstantTime(expectedHmac, hmac)) {

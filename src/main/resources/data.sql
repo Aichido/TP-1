@@ -1,6 +1,4 @@
--- Compte de test TP3
--- Email    : toto@example.com
--- Password : Toto1234!@secure  (stocké en clair - TP3 pédagogique)
--- TP4 chiffrera ce champ avec AES-GCM + APP_MASTER_KEY
-INSERT IGNORE INTO users (email, password_encrypted, failed_attempts, created_at)
-VALUES ('toto@example.com', 'Toto1234!@secure', 0, NOW());
+-- TP4 : Le compte de test toto@example.com est créé automatiquement par DataInitializer.java
+-- au démarrage de l'application (profil non-test).
+-- Le mot de passe est chiffré AES-256-GCM avant stockage via APP_MASTER_KEY.
+-- Aucun INSERT SQL n'est possible car le chiffré dépend de APP_MASTER_KEY et d'un IV aléatoire.
