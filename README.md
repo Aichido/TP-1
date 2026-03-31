@@ -1,4 +1,4 @@
-# Serveur d'Authentification – TP1 à TP3
+# Serveur d'Authentification – TP1 à TP4
 
 ## Prérequis
 - Java 17
@@ -36,11 +36,15 @@ L'API démarre sur : http://localhost:8080
 
 ## Compte de test
 
-| TP  | Email               | Mot de passe       |
-|-----|---------------------|--------------------|
-| TP1 | toto@example.com    | pwd1234            |
-| TP2 | toto@example.com    | Toto1234!@secure   |
-| TP3 | toto@example.com    | Toto1234!@secure   |
+| TP  | Email               | Mot de passe       | Stockage serveur                  |
+|-----|---------------------|--------------------|-----------------------------------|
+| TP1 | toto@example.com    | pwd1234            | Clair                             |
+| TP2 | toto@example.com    | Toto1234!@secure   | BCrypt                            |
+| TP3 | toto@example.com    | Toto1234!@secure   | Clair (limite pédagogique)        |
+| TP4 | toto@example.com    | Toto1234!@secure   | AES-256-GCM (v1:iv:ciphertext)   |
+
+> **TP4** : Le compte de test est créé automatiquement au démarrage (`DataInitializer.java`).
+> Le mot de passe est chiffré via `APP_MASTER_KEY` avant toute insertion en base.
 
 ---
 
@@ -80,6 +84,13 @@ L'API démarre sur : http://localhost:8080
 | v3.5-token           | Token SSO avec expiration 15 min             |
 | v3.6-tests-80        | Tests >= 15, couverture >= 80%               |
 | v3-tp3               | Finalisation TP3                             |
+| v4.0-start           | Démarrage TP4                                |
+| v4.1-aes-gcm         | AesGcmService (AES-256-GCM) + EncryptionException |
+| v4.2-register-encrypt| Chiffrement mot de passe à l'inscription     |
+| v4.3-login-decrypt   | Déchiffrement au login + DataInitializer     |
+| v4.4-ci-cd           | CI/CD avec APP_MASTER_KEY + blocage merge    |
+| v4.5-tests-20        | 23+ tests (AesGcmServiceTest + AuthServiceTest) |
+| v4-tp4               | Finalisation TP4                             |
 
 ---
 
@@ -147,6 +158,39 @@ Aucune limitation du nombre de tentatives. Un attaquant peut essayer des million
 
 ---
 
+## > Étapes manuelles obligatoires TP4
+
+> **1. Définir la Master Key en variable d'environnement**
+> ```bash
+> # Linux / macOS
+> export APP_MASTER_KEY="votre_cle_secrete_longue_et_aleatoire"
+> # Windows PowerShell
+> $env:APP_MASTER_KEY="votre_cle_secrete_longue_et_aleatoire"
+> ```
+> La clé doit avoir au moins 32 caractères aléatoires. Elle ne doit jamais être dans le code ou dans Git.
+
+> **2. Ajouter `APP_MASTER_KEY` comme secret GitHub Actions**
+> - Aller dans **GitHub → Settings → Secrets and variables → Actions**
+> - Ajouter : `APP_MASTER_KEY` avec votre valeur de production
+> - La CI injecte automatiquement une clé fictive pour les tests (`test_master_key_for_ci_only`)
+
+> **3. Configurer le blocage de merge si CI échoue**
+> - Aller dans **GitHub → Settings → Branches → Branch protection rules**
+> - Sélectionner la branche `main`
+> - Cocher **"Require status checks to pass before merging"**
+> - Ajouter le check `build`
+> - Cocher **"Require branches to be up to date before merging"**
+
+> **4. Réinitialiser la base MySQL pour TP4**
+> ```sql
+> -- Les anciens mots de passe en clair (TP3) ne peuvent pas être déchiffrés en TP4.
+> -- Vider la table et redémarrer l'application pour recréer les comptes chiffrés.
+> DELETE FROM users;
+> DELETE FROM auth_nonce;
+> ```
+
+---
+
 ## Analyse de sécurité TP3 – Protocole HMAC + anti-rejeu
 
 - **Aucun mot de passe ne circule** sur le réseau (ni en clair, ni haché).
@@ -156,3 +200,22 @@ Aucune limitation du nombre de tentatives. Un attaquant peut essayer des million
 - **Comparaison en temps constant** : évite les attaques par timing.
 
 **Limite pédagogique** : Le mot de passe est stocké de façon réversible en base pour servir de clé HMAC. En industrie, on éviterait ce stockage réversible — c'est le compromis pédagogique de TP3, corrigé en TP4 avec AES-GCM.
+
+---
+
+## Analyse de sécurité TP4 – Master Key AES-GCM
+
+- **AES-256-GCM** : chiffrement symétrique AEAD (confidentialité + intégrité en un seul algo).
+- **IV aléatoire** : 96 bits générés via `SecureRandom` à chaque chiffrement → deux chiffrements du même texte sont toujours différents.
+- **Intégrité garantie** : le tag GCM (128 bits) détecte toute modification du chiffré.
+- **Clé hors code** : `APP_MASTER_KEY` injectée uniquement par variable d'environnement.
+- **CI/CD** : GitHub Actions bloque tout merge si un test échoue ou si le Quality Gate SonarCloud est rouge.
+
+**Résumé de la progression de sécurité :**
+
+| TP  | Transit      | Stockage              | Rejeu    |
+|-----|-------------|----------------------|----------|
+| TP1 | Clair        | Clair                | Possible |
+| TP2 | Clair        | BCrypt               | Possible |
+| TP3 | HMAC (zéro) | Clair réversible     | Bloqué   |
+| TP4 | HMAC (zéro) | AES-256-GCM chiffré  | Bloqué   |
