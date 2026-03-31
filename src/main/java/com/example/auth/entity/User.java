@@ -6,14 +6,16 @@ import java.time.LocalDateTime;
 /**
  * Entité représentant un utilisateur en base de données.
  * <p>
- * NB : Cette implémentation est volontairement dangereuse
- * et ne doit jamais être utilisée en production.
- * Le mot de passe est stocké en clair, ce qui constitue une faille
- * de sécurité critique.
+ * TP2 : Le mot de passe est désormais stocké sous forme de hash BCrypt
+ * (champ {@code password_hash}).
+ * Le champ {@code password_clear} du TP1 est supprimé définitivement.
+ * </p>
+ * <p>
+ * TP2 améliore le stockage mais ne protège pas encore contre le rejeu.
  * </p>
  *
  * @author Tahiry
- * @version 1.0 - TP1
+ * @version 2.0 - TP2
  */
 @Entity
 @Table(name = "users")
@@ -26,18 +28,24 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    /**
-     * Mot de passe stocké en CLAIR.
-     */
-    @Column(name = "password_clear", nullable = false)
+    /** Mot de passe stocké sous forme de hash BCrypt. */
+    @Column(name = "password_hash", nullable = false)
     private String password;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // Token simple pour la route protégée
+    /** Token de session simple pour la route protégée. */
     @Column(name = "session_token")
     private String sessionToken;
+
+    /** Nombre de tentatives de connexion échouées consécutives. */
+    @Column(name = "failed_attempts", nullable = false)
+    private int failedAttempts = 0;
+
+    /** Date/heure jusqu'à laquelle le compte est verrouillé (null = non verrouillé). */
+    @Column(name = "lock_until")
+    private LocalDateTime lockUntil;
 
     public User() {}
 
@@ -62,4 +70,10 @@ public class User {
 
     public String getSessionToken() { return sessionToken; }
     public void setSessionToken(String sessionToken) { this.sessionToken = sessionToken; }
+
+    public int getFailedAttempts() { return failedAttempts; }
+    public void setFailedAttempts(int failedAttempts) { this.failedAttempts = failedAttempts; }
+
+    public LocalDateTime getLockUntil() { return lockUntil; }
+    public void setLockUntil(LocalDateTime lockUntil) { this.lockUntil = lockUntil; }
 }
