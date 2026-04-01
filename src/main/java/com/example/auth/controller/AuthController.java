@@ -1,7 +1,7 @@
 package com.example.auth.controller;
 
-import com.example.auth.dto.LoginRequest;
-import com.example.auth.dto.LoginResponse;
+import com.example.auth.dto.LoginHmacRequest;
+import com.example.auth.dto.LoginHmacResponse;
 import com.example.auth.dto.RegisterRequest;
 import com.example.auth.entity.User;
 import com.example.auth.service.AuthService;
@@ -9,21 +9,24 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
  * Contrôleur REST pour l'authentification.
  * <p>
- * AVERTISSEMENT : Cette implémentation est volontairement dangereuse
- * et ne doit jamais être utilisée en production.
+ * TP3 : Le login utilise désormais le protocole HMAC.
+ * Le client envoie {@code {email, nonce, timestamp, hmac}} au lieu de {@code {email, password}}.
  * </p>
  * Endpoints :
- * - POST /api/auth/register  : inscription
- * - POST /api/auth/login     : connexion
- * - GET  /api/me             : profil (route protégée)
+ * <ul>
+ *   <li>POST /api/auth/register — inscription</li>
+ *   <li>POST /api/auth/login    — connexion HMAC</li>
+ *   <li>GET  /api/me            — profil (Bearer token requis)</li>
+ * </ul>
  *
  * @author Tahiry
- * @version 1.0 - TP1
+ * @version 3.0 - TP3
  */
 @RestController
 public class AuthController {
@@ -35,7 +38,7 @@ public class AuthController {
     }
 
     /**
-     * Endpoint d'inscription.
+     * Inscription d'un nouvel utilisateur.
      * @param request corps JSON avec email et password
      * @return 201 Created si succès
      */
@@ -47,28 +50,36 @@ public class AuthController {
     }
 
     /**
-     * Endpoint de connexion.
-     * @param request corps JSON avec email et password
-     * @return 200 OK avec token si succès
+     * Connexion via protocole HMAC (TP3).
+     * <p>
+     * Payload attendu : {@code {email, nonce, timestamp, hmac}}<br>
+     * Retourne un token SSO valide 15 minutes.
+     * </p>
+     * @param request corps JSON avec email, nonce, timestamp, hmac
+     * @return 200 OK avec accessToken et expiresAt
      */
     @PostMapping("/api/auth/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        String token = authService.login(request.getEmail(), request.getPassword());
-        return ResponseEntity.ok(new LoginResponse(token, "Connexion réussie"));
+    public ResponseEntity<LoginHmacResponse> login(@RequestBody LoginHmacRequest request) {
+        String token = authService.login(
+            request.getEmail(),
+            request.getNonce(),
+            request.getTimestamp(),
+            request.getHmac()
+        );
+        String expiresAt = LocalDateTime.now().plusMinutes(15).toString();
+        return ResponseEntity.ok(new LoginHmacResponse(token, expiresAt, "Connexion réussie"));
     }
 
     /**
-     * Route protégée - accessible uniquement avec un token valide.
+     * Route protégée — retourne le profil de l'utilisateur authentifié.
      * @param authorization header "Bearer {token}"
-     * @return les informations de l'utilisateur authentifié
+     * @return 200 OK avec id, email, createdAt
      */
     @GetMapping("/api/me")
     public ResponseEntity<Map<String, Object>> getMe(
             @RequestHeader(value = "Authorization", required = false) String authorization) {
-
         String token = extractToken(authorization);
         User user = authService.getUserByToken(token);
-
         return ResponseEntity.ok(Map.of(
                 "id", user.getId(),
                 "email", user.getEmail(),

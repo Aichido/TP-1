@@ -1,2 +1,4 @@
-INSERT IGNORE INTO users (email, password_clear, created_at)
-VALUES ('toto@example.com', 'pwd1234', NOW());
+-- TP4 : Le compte de test toto@example.com est créé automatiquement par DataInitializer.java
+-- au démarrage de l'application (profil non-test).
+-- Le mot de passe est chiffré AES-256-GCM avant stockage via APP_MASTER_KEY.
+-- Aucun INSERT SQL n'est possible car le chiffré dépend de APP_MASTER_KEY et d'un IV aléatoire.

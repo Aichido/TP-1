@@ -6,14 +6,18 @@ import java.time.LocalDateTime;
 /**
  * Entité représentant un utilisateur en base de données.
  * <p>
- * NB : Cette implémentation est volontairement dangereuse
- * et ne doit jamais être utilisée en production.
- * Le mot de passe est stocké en clair, ce qui constitue une faille
- * de sécurité critique.
+ * TP3 : Le mot de passe est stocké de façon réversible (colonne {@code password_encrypted})
+ * afin de pouvoir être utilisé comme clé HMAC lors du login sans le transmettre sur le réseau.
+ * </p>
+ * <p>
+ * <b>Avertissement pédagogique :</b> En industrie, on évite de stocker un mot de passe
+ * réversible. On préférerait un hash non réversible et adaptatif. Ici, on accepte le
+ * chiffrement réversible pour simplifier l'apprentissage du protocole signé.
+ * TP4 corrigera ce point avec AES-GCM et une Master Key.
  * </p>
  *
  * @author Tahiry
- * @version 1.0 - TP1
+ * @version 3.0 - TP3
  */
 @Entity
 @Table(name = "users")
@@ -27,17 +31,26 @@ public class User {
     private String email;
 
     /**
-     * Mot de passe stocké en CLAIR.
+     * Mot de passe stocké en clair (TP3).
+     * Sera chiffré par AES-GCM avec APP_MASTER_KEY en TP4.
      */
-    @Column(name = "password_clear", nullable = false)
+    @Column(name = "password_encrypted", nullable = false)
     private String password;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // Token simple pour la route protégée
+    /** Token SSO émis après authentification HMAC réussie. */
     @Column(name = "session_token")
     private String sessionToken;
+
+    /** Nombre de tentatives de connexion échouées consécutives. */
+    @Column(name = "failed_attempts", nullable = false)
+    private int failedAttempts = 0;
+
+    /** Date/heure jusqu'à laquelle le compte est verrouillé (null = non verrouillé). */
+    @Column(name = "lock_until")
+    private LocalDateTime lockUntil;
 
     public User() {}
 
@@ -47,7 +60,6 @@ public class User {
         this.createdAt = LocalDateTime.now();
     }
 
-    // Getters & Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -62,4 +74,10 @@ public class User {
 
     public String getSessionToken() { return sessionToken; }
     public void setSessionToken(String sessionToken) { this.sessionToken = sessionToken; }
+
+    public int getFailedAttempts() { return failedAttempts; }
+    public void setFailedAttempts(int failedAttempts) { this.failedAttempts = failedAttempts; }
+
+    public LocalDateTime getLockUntil() { return lockUntil; }
+    public void setLockUntil(LocalDateTime lockUntil) { this.lockUntil = lockUntil; }
 }

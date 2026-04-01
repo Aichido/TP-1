@@ -35,6 +35,17 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
+    /**
+     * HTTP 423 (Locked) : compte temporairement verrouillé après trop d'échecs.
+     * On choisit 423 plutôt que 429 car le verrou est lié au compte (état métier),
+     * pas à un débit de requêtes réseau.
+     */
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<Map<String, Object>> handleLocked(
+            AccountLockedException ex, HttpServletRequest request) {
+        return buildError(HttpStatus.LOCKED, ex.getMessage(), request.getRequestURI());
+    }
+
     private ResponseEntity<Map<String, Object>> buildError(
             HttpStatus status, String message, String path) {
         Map<String, Object> body = new HashMap<>();
