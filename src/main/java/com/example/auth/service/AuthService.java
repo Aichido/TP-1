@@ -195,6 +195,89 @@ public class AuthService {
                 .orElseThrow(() -> new AuthenticationFailedException("Token invalide ou expiré"));
     }
 
+    /**
+     * Modifie le mot de passe d'un utilisateur authentifié.
+     * <p>
+     * Protocole (TP5) :
+     * <ol>
+     *   <li>Vérification du Bearer token → identification de l'utilisateur</li>
+     *   <li>Compte non verrouillé (sinon 423)</li>
+     *   <li>Timestamp dans la fenêtre ±60 s (anti-rejeu)</li>
+     *   <li>Nonce non déjà utilisé (anti-rejeu)</li>
+     *   <li>HMAC de l'ancien mot de passe valide (preuve de connaissance)</li>
+     *   <li>Nouveau mot de passe conforme à la politique</li>
+     *   <li>Chiffrement AES-GCM du nouveau mot de passe</li>
+     *   <li>Invalidation du token SSO (force la reconnexion)</li>
+     * </ol>
+     * </p>
+     *
+     * @param token       le token SSO du porteur (Bearer)
+     * @param nonce       UUID unique généré par le client
+     * @param timestamp   timestamp Unix en secondes
+     * @param oldHmac     HMAC-SHA256(ancienMotDePasse, email:nonce:timestamp)
+     * @param newPassword le nouveau mot de passe en clair
+     * @throws AuthenticationFailedException si le token ou le HMAC est invalide
+     * @throws AccountLockedException        si le compte est verrouillé
+     * @throws InvalidInputException         si le nouveau mot de passe ne respecte pas la politique
+     */
+    public void changePassword(String token, String nonce, long timestamp,
+                               String oldHmac, String newPassword) {
+        // 1. Identification via token
+        User user = getUserByToken(token);
+
+        // 2. Vérification du verrouillage
+        if (user.getLockUntil() != null && LocalDateTime.now().isBefore(user.getLockUntil())) {
+            logger.warn("Changement MDP refusé - compte verrouillé : {}", user.getEmail());
+            throw new AccountLockedException("Compte temporairement verrouillé. Réessayez dans 2 minutes.");
+        }
+
+        // 3. Vérification timestamp ±60 secondes
+        long now = Instant.now().getEpochSecond();
+        if (Math.abs(now - timestamp) > TIMESTAMP_WINDOW_SECONDS) {
+            logger.warn("Changement MDP refusé - timestamp invalide pour : {}", user.getEmail());
+            throw new AuthenticationFailedException("Vérification échouée");
+        }
+
+        // 4. Vérification anti-rejeu : nonce déjà vu ?
+        if (authNonceRepository.findByUserAndNonce(user, nonce).isPresent()) {
+            logger.warn("Changement MDP refusé - nonce déjà utilisé pour : {}", user.getEmail());
+            throw new AuthenticationFailedException("Vérification échouée");
+        }
+
+        // Enregistrement du nonce (consommé immédiatement)
+        AuthNonce authNonce = new AuthNonce(user, nonce,
+            LocalDateTime.now().plusSeconds(NONCE_TTL_SECONDS));
+        authNonce.setConsumed(true);
+        authNonceRepository.save(authNonce);
+
+        // 5. Déchiffrement AES-GCM pour récupérer l'ancien mot de passe
+        String plainOldPassword = aesGcmService.decrypt(user.getPassword());
+
+        // Recalcul HMAC côté serveur et comparaison en temps constant
+        String message = hmacService.buildMessage(user.getEmail(), nonce, timestamp);
+        String expectedHmac = hmacService.compute(plainOldPassword, message);
+        if (!hmacService.compareConstantTime(expectedHmac, oldHmac)) {
+            handleFailedAttempt(user);
+            logger.warn("Changement MDP échoué - HMAC invalide pour : {}", user.getEmail());
+            throw new AuthenticationFailedException("Vérification échouée");
+        }
+
+        // 6. Validation du nouveau mot de passe
+        passwordPolicyValidator.validate(newPassword);
+
+        // 7. Chiffrement AES-GCM du nouveau mot de passe
+        String encryptedNewPassword = aesGcmService.encrypt(newPassword);
+
+        // 8. Mise à jour et invalidation du token SSO (force reconnexion)
+        user.setPassword(encryptedNewPassword);
+        user.setSessionToken(null);
+        user.setFailedAttempts(0);
+        user.setLockUntil(null);
+        userRepository.save(user);
+
+        logger.info("Changement de mot de passe réussi pour : {}", user.getEmail());
+    }
+
     private void handleFailedAttempt(User user) {
         int attempts = user.getFailedAttempts() + 1;
         user.setFailedAttempts(attempts);
