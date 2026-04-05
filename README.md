@@ -1,4 +1,4 @@
-# Serveur d'Authentification – TP1 à TP4
+# Serveur d'Authentification – TP1 à TP5
 
 ## Prérequis
 - Java 17
@@ -50,11 +50,12 @@ L'API démarre sur : http://localhost:8080
 
 ## Endpoints
 
-| Méthode | URL                   | Description                        |
-|---------|-----------------------|------------------------------------|
-| POST    | /api/auth/register    | Créer un compte                    |
-| POST    | /api/auth/login       | Se connecter (HMAC depuis TP3)     |
-| GET     | /api/me               | Profil (Bearer token requis)       |
+| Méthode | URL                          | Description                              |
+|---------|------------------------------|------------------------------------------|
+| POST    | /api/auth/register           | Créer un compte                          |
+| POST    | /api/auth/login              | Se connecter (HMAC depuis TP3)           |
+| POST    | /api/auth/change-password    | Changer de mot de passe (TP5)            |
+| GET     | /api/me                      | Profil (Bearer token requis)             |
 
 ---
 
@@ -91,6 +92,12 @@ L'API démarre sur : http://localhost:8080
 | v4.4-ci-cd           | CI/CD avec APP_MASTER_KEY + blocage merge    |
 | v4.5-tests-20        | 23+ tests (AesGcmServiceTest + AuthServiceTest) |
 | v4-tp4               | Finalisation TP4                             |
+| v5.0-start           | Démarrage TP5                                |
+| v5.1-dto             | DTO ChangePasswordRequest                    |
+| v5.2-service         | AuthService.changePassword() + invalidation token |
+| v5.3-endpoint        | POST /api/auth/change-password               |
+| v5.4-tests           | 8 tests TP5 (cas 17-24)                      |
+| v5-tp5               | Finalisation TP5                             |
 
 ---
 
@@ -219,3 +226,15 @@ Aucune limitation du nombre de tentatives. Un attaquant peut essayer des million
 | TP2 | Clair        | BCrypt               | Possible |
 | TP3 | HMAC (zéro) | Clair réversible     | Bloqué   |
 | TP4 | HMAC (zéro) | AES-256-GCM chiffré  | Bloqué   |
+| TP5 | HMAC (zéro) | AES-256-GCM chiffré  | Bloqué   |
+
+---
+
+## Analyse de sécurité TP5 – Changement de mot de passe sécurisé
+
+- **Preuve de connaissance** : l'utilisateur prouve la connaissance de l'ancien mot de passe via HMAC (même protocole que le login) — l'ancien mot de passe ne circule pas sur le réseau.
+- **Anti-rejeu** : nonce UUID consommé + timestamp ±60 s — même protection qu'au login.
+- **Invalidation de session** : le token SSO est mis à `null` après changement → reconnexion obligatoire.
+- **Politique imposée** : le nouveau mot de passe doit respecter les règles TP2 (12 car. min, complexité).
+- **Chiffrement** : le nouveau mot de passe est chiffré AES-256-GCM avant stockage (TP4).
+- **Anti-bruteforce** : les tentatives échouées incrémentent le compteur et peuvent verrouiller le compte (TP2).

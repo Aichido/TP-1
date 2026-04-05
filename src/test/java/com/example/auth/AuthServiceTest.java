@@ -18,8 +18,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests d'intégration du service d'authentification TP3.
- * Couvre les 15 cas obligatoires : HMAC, anti-rejeu, timestamp, token SSO.
+ * Tests d'intégration du service d'authentification.
+ * TP3 : HMAC, anti-rejeu, timestamp, token SSO (15 cas).
+ * TP5 : changement de mot de passe (7 cas supplémentaires).
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -184,6 +185,115 @@ class AuthServiceTest {
         String h1 = hmacService.compute(VALID_PASSWORD, msg);
         String h2 = hmacService.compute(VALID_PASSWORD, msg);
         assertEquals(h1, h2);
+    }
+
+    // ══ TP5 — Changement de mot de passe ══════════════════════════════════════
+
+    private static final String NEW_PASSWORD = "NewSecure2!@strong";
+
+    /** Helper : inscrit l'utilisateur, se connecte et retourne le token SSO. */
+    private String registerAndLogin() {
+        authService.register(VALID_EMAIL, VALID_PASSWORD);
+        String n = nonce(); long ts = nowTs();
+        return authService.login(VALID_EMAIL, n, ts, validHmac(VALID_EMAIL, n, ts));
+    }
+
+    /** Helper : HMAC de l'ancien mot de passe pour le changement. */
+    private String changeHmac(String email, String n, long ts) {
+        return hmacService.compute(VALID_PASSWORD,
+            hmacService.buildMessage(email, n, ts));
+    }
+
+    // ── 17. Changement OK ─────────────────────────────────────────────────────
+    @Test
+    void changePasswordShouldSucceedWithValidHmac() {
+        String token = registerAndLogin();
+        String n = nonce(); long ts = nowTs();
+        assertDoesNotThrow(() ->
+            authService.changePassword(token, n, ts, changeHmac(VALID_EMAIL, n, ts), NEW_PASSWORD));
+    }
+
+    // ── 18. Token invalidé après changement (force reconnexion) ──────────────
+    @Test
+    void changePasswordShouldInvalidateSessionToken() {
+        String token = registerAndLogin();
+        String n = nonce(); long ts = nowTs();
+        authService.changePassword(token, n, ts, changeHmac(VALID_EMAIL, n, ts), NEW_PASSWORD);
+        assertThrows(AuthenticationFailedException.class,
+            () -> authService.getUserByToken(token));
+    }
+
+    // ── 19. HMAC invalide → refus ─────────────────────────────────────────────
+    @Test
+    void changePasswordShouldFailWithInvalidHmac() {
+        String token = registerAndLogin();
+        String n = nonce(); long ts = nowTs();
+        assertThrows(AuthenticationFailedException.class,
+            () -> authService.changePassword(token, n, ts, "bad_hmac", NEW_PASSWORD));
+    }
+
+    // ── 20. Nouveau mot de passe trop court → refus ───────────────────────────
+    @Test
+    void changePasswordShouldFailWhenNewPasswordTooShort() {
+        String token = registerAndLogin();
+        String n = nonce(); long ts = nowTs();
+        assertThrows(InvalidInputException.class,
+            () -> authService.changePassword(token, n, ts, changeHmac(VALID_EMAIL, n, ts), "Short1!"));
+    }
+
+    // ── 21. Timestamp expiré → refus ─────────────────────────────────────────
+    @Test
+    void changePasswordShouldFailWithExpiredTimestamp() {
+        String token = registerAndLogin();
+        String n = nonce();
+        long expiredTs = Instant.now().getEpochSecond() - 120L;
+        assertThrows(AuthenticationFailedException.class,
+            () -> authService.changePassword(token, n, expiredTs,
+                changeHmac(VALID_EMAIL, n, expiredTs), NEW_PASSWORD));
+    }
+
+    // ── 22. Nonce déjà utilisé → refus ───────────────────────────────────────
+    @Test
+    void changePasswordShouldFailWhenNonceAlreadyUsed() {
+        String token = registerAndLogin();
+        String n = nonce(); long ts = nowTs();
+        authService.changePassword(token, n, ts, changeHmac(VALID_EMAIL, n, ts), NEW_PASSWORD);
+
+        // Réinscription pour obtenir un nouveau token et tester la réutilisation du nonce
+        authService.register("other@example.com", "OtherPass1!@secure");
+        String n2 = nonce(); long ts2 = nowTs();
+        String token2 = authService.login("other@example.com", n2, ts2,
+            hmacService.compute("OtherPass1!@secure", hmacService.buildMessage("other@example.com", n2, ts2)));
+
+        // Réutilise le nonce déjà consommé
+        long ts3 = nowTs();
+        String hmac3 = hmacService.compute("OtherPass1!@secure",
+            hmacService.buildMessage("other@example.com", n, ts3));
+        assertThrows(AuthenticationFailedException.class,
+            () -> authService.changePassword(token2, n, ts3, hmac3, NEW_PASSWORD));
+    }
+
+    // ── 23. Token invalide → refus ────────────────────────────────────────────
+    @Test
+    void changePasswordShouldFailWithInvalidToken() {
+        String n = nonce(); long ts = nowTs();
+        assertThrows(AuthenticationFailedException.class,
+            () -> authService.changePassword("invalid-token", n, ts, "hmac", NEW_PASSWORD));
+    }
+
+    // ── 24. Login avec nouveau mot de passe après changement ─────────────────
+    @Test
+    void loginShouldSucceedWithNewPasswordAfterChange() {
+        String token = registerAndLogin();
+        String n = nonce(); long ts = nowTs();
+        authService.changePassword(token, n, ts, changeHmac(VALID_EMAIL, n, ts), NEW_PASSWORD);
+
+        // Connexion avec le nouveau mot de passe
+        String n2 = nonce(); long ts2 = nowTs();
+        String newHmac = hmacService.compute(NEW_PASSWORD,
+            hmacService.buildMessage(VALID_EMAIL, n2, ts2));
+        String newToken = authService.login(VALID_EMAIL, n2, ts2, newHmac);
+        assertNotNull(newToken);
     }
 
     // ── 16. Verrouillage après 5 échecs ──────────────────────────────────────

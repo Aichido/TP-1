@@ -1,5 +1,6 @@
 package com.example.auth.controller;
 
+import com.example.auth.dto.ChangePasswordRequest;
 import com.example.auth.dto.LoginHmacRequest;
 import com.example.auth.dto.LoginHmacResponse;
 import com.example.auth.dto.RegisterRequest;
@@ -20,13 +21,14 @@ import java.util.Map;
  * </p>
  * Endpoints :
  * <ul>
- *   <li>POST /api/auth/register — inscription</li>
- *   <li>POST /api/auth/login    — connexion HMAC</li>
- *   <li>GET  /api/me            — profil (Bearer token requis)</li>
+ *   <li>POST /api/auth/register         — inscription</li>
+ *   <li>POST /api/auth/login            — connexion HMAC</li>
+ *   <li>POST /api/auth/change-password  — changement de mot de passe (TP5)</li>
+ *   <li>GET  /api/me                    — profil (Bearer token requis)</li>
  * </ul>
  *
  * @author Tahiry
- * @version 3.0 - TP3
+ * @version 5.0 - TP5
  */
 @RestController
 public class AuthController {
@@ -68,6 +70,32 @@ public class AuthController {
         );
         String expiresAt = LocalDateTime.now().plusMinutes(15).toString();
         return ResponseEntity.ok(new LoginHmacResponse(token, expiresAt, "Connexion réussie"));
+    }
+
+    /**
+     * Changement de mot de passe authentifié (TP5).
+     * <p>
+     * L'utilisateur prouve la connaissance de son ancien mot de passe via un HMAC,
+     * puis fournit le nouveau mot de passe. Le token SSO est invalidé après succès
+     * pour forcer une reconnexion.
+     * </p>
+     * @param authorization header "Bearer {token}"
+     * @param request       corps JSON avec nonce, timestamp, oldHmac, newPassword
+     * @return 200 OK avec message de confirmation
+     */
+    @PostMapping("/api/auth/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody ChangePasswordRequest request) {
+        String token = extractToken(authorization);
+        authService.changePassword(
+            token,
+            request.getNonce(),
+            request.getTimestamp(),
+            request.getOldHmac(),
+            request.getNewPassword()
+        );
+        return ResponseEntity.ok(Map.of("message", "Mot de passe modifié avec succès. Veuillez vous reconnecter."));
     }
 
     /**
